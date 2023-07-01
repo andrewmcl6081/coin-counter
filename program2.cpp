@@ -57,11 +57,13 @@ int main(int argc, char** argv) {
         cv::imshow("eroded and dilated", edgesEroded);
 
 
-        // Find and draw the contours on a black image
+        // Find contours
         // For our test image we will have 9 contours representing the 9 coins
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(edgesEroded, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
+
+        // Draw contours onto a blank black image
         cv::Mat imageContours = cv::Mat::zeros(imageEdges.size(), CV_8UC3);
         cv::RNG rand(12345);
         for(int i = 0; i < contours.size(); i++) {
@@ -114,14 +116,30 @@ int main(int argc, char** argv) {
                 minEllipses[i] = cv::fitEllipse(contours[i]);
             }
         }
-        // Draw the ellipses onto image_copy
-        //cv::Mat imageEllipse = cv::Mat::zeros(imageEdges.size(), CV_8UC3);
+
         const int minEllipseInliers = 50;
         for(int i = 0; i < contours.size(); i++) {
+            
             // draw any ellipse with sufficient inliers
             if(contours.at(i).size() > minEllipseInliers) {
-                cv::Scalar color = cv::Scalar(rand.uniform(0, 256), rand.uniform(0,256), rand.uniform(0,256));
-                cv::ellipse(image_copy, minEllipses[i], color, 2);
+
+                double height = minEllipses[i].size.height;
+                double width = minEllipses[i].size.width;
+                double ellipseArea = CV_PI * (height/2.0) * (width/2.0);
+                std::cout << "area for ellipse " << i << ": " << ellipseArea << std::endl;
+
+                // Quarter
+                if(ellipseArea > 9500.00) {
+                    cv::ellipse(image_copy, minEllipses[i], green, 1);
+                }
+                // Nickel
+                else if (ellipseArea > 7500.00) {
+                    cv::ellipse(image_copy, minEllipses[i], yellow, 1);
+                }
+                // Penny or Dime
+                else {
+                    cv::ellipse(image_copy, minEllipses[i], red, 1);
+                }
             }
         }
         cv::imshow("image ellipse", image_copy);
