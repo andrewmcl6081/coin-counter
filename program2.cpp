@@ -3,6 +3,18 @@
 #include <vector>
 #include "opencv2/opencv.hpp"
 
+void mouseHandler(int event, int x, int y, int flags, void* param) {
+
+    cv::Mat* image_ptr = static_cast<cv::Mat*>(param);
+
+    if(event == cv::EVENT_LBUTTONDOWN) {
+        std::cout << "B: " << std::to_string(image_ptr->at<cv::Vec3b>(y,x)[0]) << std::endl;
+        std::cout << "G: " << std::to_string(image_ptr->at<cv::Vec3b>(y,x)[1]) << std::endl;
+        std::cout << "R: " << std::to_string(image_ptr->at<cv::Vec3b>(y,x)[2]) << std::endl;
+        std::cout << std::endl;
+    }
+}
+
 int main(int argc, char** argv) {
 
     if (argc != 2) {
@@ -10,8 +22,13 @@ int main(int argc, char** argv) {
         return 0;
     }
     else {
+
+        // Original image read in
         cv::Mat image = cv::imread(argv[1], cv::IMREAD_COLOR);
+
+        // Image for displaying final results
         cv::Mat image_copy = image.clone();
+        cv::Mat image_copy2 = image.clone();
         
         if (!image.data) {
             std::cout << "Error while opening file " << argv[1] << std::endl;
@@ -25,20 +42,18 @@ int main(int argc, char** argv) {
         // Display original image
         cv::imshow("image", image);
 
-        // Convert to grayscale
-        cv::Mat imageGray;
-        cv:cvtColor(image, imageGray, cv::COLOR_BGR2GRAY);
-        cv::imshow("grayscale image", imageGray);
-
-        // Experimental section
-
         // Blur image to reduce noise
         // Bigger kernel size == more blurr
         cv::Mat imageBlurred;
-        cv::GaussianBlur(imageGray, imageBlurred, cv::Size(5, 5), 0);
+        cv::GaussianBlur(image, imageBlurred, cv::Size(5, 5), 0);
         cv::imshow("blurred image", imageBlurred);
 
+        // Convert to grayscale
+        cv::Mat imageGray;
+        cv:cvtColor(imageBlurred, imageGray, cv::COLOR_BGR2GRAY);
+        cv::imshow("grayscale image", imageGray);
 
+        // Experimental section
         // Find edges
         cv::Mat imageEdges;
         const double cannyThreshold1 = 100;
@@ -71,35 +86,8 @@ int main(int argc, char** argv) {
             cv::drawContours(imageContours, contours, i, color);
         }
         cv::imshow("image contours", imageContours);
+       
 
-
-        // // Compute the minimum area bounding rectangles
-        // // We have a vector of RotatedRect Objects with the size of how many contours we have
-        // std::vector<cv::RotatedRect> minAreaRectangles(contours.size());
-        // for(int i = 0; i < contours.size(); i++) {
-        //     // compute a minimum area bounding rectangle for the contour
-        //     minAreaRectangles[i] = cv::minAreaRect(contours[i]);
-        // }
-        
-        // // Draw the rectangles on a new Mat named imageRectangles
-        // cv::Mat imageRectangles = cv::Mat::zeros(imageEdges.size(), CV_8UC3);
-        // for(int i = 0; i < contours.size(); i++) {
-        //     // Generating a random color for each computed min area rectangle
-        //     cv::Scalar color = cv::Scalar(rand.uniform(0, 256), rand.uniform(0,256), rand.uniform(0,256));
-
-        //     // Object that stores an (x,y) in float and we have an array of 4 of these objects
-        //     // for each rectangle point
-        //     cv::Point2f rectanglePoints[4];
-
-        //     // Filling the array rectanglePoints with the 4 points of the current
-        //     // min area rectangle 
-        //     minAreaRectangles[i].points(rectanglePoints);
-        //     for(int j = 0; j < 4; j++) {
-        //         // Connecting all the points with lines on to the image
-        //         cv::line(imageRectangles, rectanglePoints[j], rectanglePoints[(j+1) % 4], color);
-        //     }
-        // }
-        // cv::imshow("image rectangles", imageRectangles);
 
         cv::Scalar red(0,0,255);
         cv::Scalar yellow(0,255,255);
@@ -116,6 +104,12 @@ int main(int argc, char** argv) {
                 minEllipses[i] = cv::fitEllipse(contours[i]);
             }
         }
+
+        // Make a copy for HSV version of blurred version
+        cv::Mat imageHSV;
+        cv::cvtColor(imageBlurred, imageHSV, cv::COLOR_BGR2HSV);
+        cv::imshow("imageHSV", imageHSV);
+
 
         const int minEllipseInliers = 50;
         for(int i = 0; i < contours.size(); i++) {
@@ -138,13 +132,26 @@ int main(int argc, char** argv) {
                 }
                 // Penny or Dime
                 else {
-                    cv::ellipse(image_copy, minEllipses[i], red, 1);
+                    cv::Mat mask = cv::Mat::zeros(imageHSV.size(), CV_8UC1);
+                    cv::ellipse(mask, minEllipses[i], cv::Scalar(255,255,255), -1);
+                    cv::Scalar avgHSV = cv::mean(imageHSV, mask);
+
+                    // Dime
+                    if (avgHSV[0] > 17.00) {
+                        cv::ellipse(image_copy, minEllipses[i], blue, 1);
+                    }
+                    // Penny!
+                    else {
+                        cv::ellipse(image_copy, minEllipses[i], red, 1);
+                    }
+
+                    std::cout << "i = " << i << ", " << "avgHSV: " << avgHSV << "area: " << ellipseArea << std::endl;
                 }
             }
         }
+
         cv::imshow("image ellipse", image_copy);
         cv::waitKey(0);
-
     }
 
 }
