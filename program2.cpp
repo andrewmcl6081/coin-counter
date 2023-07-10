@@ -40,10 +40,7 @@ int main(int argc, char** argv) {
             std::cout << "Error while opening file " << argv[1] << std::endl;
             return 0;
         }
-
-        std::cout << "image width: " << image.size().width << std::endl;
-        std::cout << "image height: " << image.size().height << std::endl;
-        std::cout << "image channels: " << image.channels() << std::endl;
+        
 
         // Display original image
         cv::imshow("image", image);
@@ -136,15 +133,15 @@ int main(int argc, char** argv) {
 
                 // Calculate area of ellipses
                 double ellipseArea = CV_PI * (minEllipses[i].size.height / 2.0) * (minEllipses[i].size.width / 2.0);
-                //std::cout << "area for ellipse " << i << ": " << ellipseArea << std::endl;
+
 
                 // Quarter
-                if(ellipseArea > 8500.00) {
+                if(ellipseArea > 8250.00) {
                     cv::ellipse(image_result, minEllipses[i], green, 1);
                     quarters++;
                 }
                 // Nickel
-                else if (ellipseArea > 6800.00) {
+                else if (ellipseArea > 6250.00) {
                     cv::ellipse(image_result, minEllipses[i], yellow, 1);
                     nickels++;
                 }
@@ -167,6 +164,7 @@ int main(int argc, char** argv) {
                         pennies++;
                     }
 
+                    // Debugging line
                     //std::cout << "i = " << i << ", " << "avgHSV: " << avgHSV << "area: " << ellipseArea << std::endl;
                 }
             }
